@@ -1,0 +1,26 @@
+# PatchCore Flask Service - Exact Notebook Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core Framework
+flask==3.0.0
+
+# PyTorch (CPU version - for GPU replace with torch==2.1.0+cu118)
+torch==2.1.0
+torchvision==0.16.0
+
+# Computer Vision & Image Processing
+opencv-python==4.8.1.78
+pillow==10.1.0
+
+# Scientific Computing
+numpy==1.24.3
+scikit-learn==1.3.2
+
+# Progress Bars (if needed)
+tqdm==4.66.1
+
+# Optional: FAISS for faster k-NN (uncomment if your notebook used it)
+# faiss-cpu==1.7.4
+
+# Production Server (optional - for deployment)
+# gunicorn==21.2.0

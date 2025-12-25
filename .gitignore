@@ -1,0 +1,67 @@
+# .gitignore for PatchCore Flask Service
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+
+# Flask
+instance/
+.webassets-cache
+
+# Output Files
+static/outputs/*.png
+static/outputs/*.jpg
+*.png
+*.jpg
+*.jpeg
+!test_*.jpg
+!normal_*.jpg
+
+# Models & Memory Banks
+models/*.npy
+models/*.pkl
+models/*.pt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Test Files
+test_normal.jpg
+test_damaged.jpg
+result_*.png
+
+# Environment Variables
+.env
+.env.local
