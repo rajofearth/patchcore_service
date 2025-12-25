@@ -6,7 +6,9 @@ import numpy as np
 from PIL import Image
 import cv2
 import io
+import base64
 from flask import Flask, request, jsonify, send_file, render_template
+from flask_cors import CORS
 
 class FeatureExtractor(torch.nn.Module):
     def __init__(self):
@@ -99,10 +101,12 @@ def create_overlay_image(original_image, anomaly_map, threshold=0.5):
     heatmap_colored = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
     heatmap_colored = cv2.cvtColor(heatmap_colored, cv2.COLOR_BGR2RGB)
     overlay = cv2.addWeighted(original_np, 0.5, heatmap_colored, 0.5, 0)
-    return Image.fromarray(overlay)
+    damage_percentage = (anomaly_map > threshold).sum() / anomaly_map.size * 100
+    return Image.fromarray(overlay), damage_percentage
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+CORS(app)
 
 device = torch.device('cpu')
 feature_extractor = FeatureExtractor().to(device)
@@ -144,11 +148,40 @@ def infer():
     try:
         test_image = Image.open(io.BytesIO(file.read()))
         anomaly_map = patchcore.predict(test_image)
-        result = create_overlay_image(test_image, anomaly_map, threshold=0.5)
+        result, _ = create_overlay_image(test_image, anomaly_map, threshold=0.5)
         img_io = io.BytesIO()
         result.save(img_io, 'PNG')
         img_io.seek(0)
         return send_file(img_io, mimetype='image/png')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/infer_json', methods=['POST'])
+def infer_json():
+    if patchcore.memory_bank is None:
+        return jsonify({'error': 'Memory bank not loaded. Call /load_reference first'}), 400
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+    try:
+        test_image = Image.open(io.BytesIO(file.read()))
+        anomaly_map = patchcore.predict(test_image)
+        result, damage_percentage = create_overlay_image(test_image, anomaly_map, threshold=0.5)
+        
+        img_io = io.BytesIO()
+        result.save(img_io, 'PNG')
+        img_io.seek(0)
+        image_base64 = base64.b64encode(img_io.getvalue()).decode('utf-8')
+        
+        return jsonify({
+            'status': 'success',
+            'damage_percentage': float(round(damage_percentage, 2)),
+            'anomaly_detected': bool(damage_percentage > 5.0),
+            'threshold': 0.5,
+            'image': f'data:image/png;base64,{image_base64}'
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
