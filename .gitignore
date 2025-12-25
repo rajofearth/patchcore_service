@@ -30,9 +30,6 @@ instance/
 # Output Files
 static/outputs/*.png
 static/outputs/*.jpg
-*.png
-*.jpg
-*.jpeg
 !test_*.jpg
 !normal_*.jpg
 

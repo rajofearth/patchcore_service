@@ -2,7 +2,7 @@
 
 Minimal Flask service for package damage detection using PatchCore anomaly detection. Features a modern web interface and RESTful API with CORS support for external integrations.
 
-![image.png](static/image.png)
+![image.png](templates/image.png)
 ## Quick Start
 
 1. Create virtual environment:
