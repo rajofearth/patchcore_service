@@ -95,14 +95,17 @@ class PatchCore:
 def create_overlay_image(original_image, anomaly_map, threshold=0.5):
     if original_image.mode != 'RGB':
         original_image = original_image.convert('RGB')
+    original_size = original_image.size
     original_resized = original_image.resize((224, 224))
     original_np = np.array(original_resized)
     heatmap = (anomaly_map * 255).astype(np.uint8)
     heatmap_colored = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
     heatmap_colored = cv2.cvtColor(heatmap_colored, cv2.COLOR_BGR2RGB)
     overlay = cv2.addWeighted(original_np, 0.5, heatmap_colored, 0.5, 0)
+    overlay_image = Image.fromarray(overlay)
+    overlay_image = overlay_image.resize(original_size, Image.LANCZOS)
     damage_percentage = (anomaly_map > threshold).sum() / anomaly_map.size * 100
-    return Image.fromarray(overlay), damage_percentage
+    return overlay_image, damage_percentage
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
