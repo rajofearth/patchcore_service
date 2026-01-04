@@ -7,6 +7,7 @@ from PIL import Image
 import cv2
 import io
 import base64
+import os
 from flask import Flask, request, jsonify, send_file, render_template
 from flask_cors import CORS
 
@@ -116,20 +117,37 @@ feature_extractor = FeatureExtractor().to(device)
 feature_extractor.eval()
 patchcore = PatchCore(feature_extractor, device, num_neighbors=9)
 
+def _default_reference_image_path() -> str:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, "test_images", "good.jpg")
+
+def _ensure_memory_bank_loaded() -> None:
+    if patchcore.memory_bank is not None:
+        return
+    default_path = _default_reference_image_path()
+    if not os.path.exists(default_path):
+        raise FileNotFoundError(f"Default reference image not found at {default_path}")
+    with Image.open(default_path) as img:
+        patchcore.fit_normal_reference(img)
+
 @app.route('/', methods=['GET'])
 def home():
     return render_template('index.html')
 
 @app.route('/load_reference', methods=['POST'])
 def load_reference():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image file provided'}), 400
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'Empty filename'}), 400
     try:
-        image = Image.open(io.BytesIO(file.read()))
-        memory_shape = patchcore.fit_normal_reference(image)
+        # If a reference image is provided, use it; otherwise fall back to the default.
+        if 'image' in request.files and request.files['image'].filename != '':
+            file = request.files['image']
+            image = Image.open(io.BytesIO(file.read()))
+            memory_shape = patchcore.fit_normal_reference(image)
+        else:
+            default_path = _default_reference_image_path()
+            if not os.path.exists(default_path):
+                return jsonify({'error': f'Default reference image not found at {default_path}'}), 500
+            with Image.open(default_path) as image:
+                memory_shape = patchcore.fit_normal_reference(image)
         return jsonify({
             'status': 'success',
             'message': 'Memory bank built successfully',
@@ -141,8 +159,10 @@ def load_reference():
 
 @app.route('/infer', methods=['POST'])
 def infer():
-    if patchcore.memory_bank is None:
-        return jsonify({'error': 'Memory bank not loaded. Call /load_reference first'}), 400
+    try:
+        _ensure_memory_bank_loaded()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     if 'image' not in request.files:
         return jsonify({'error': 'No image file provided'}), 400
     file = request.files['image']
@@ -161,8 +181,10 @@ def infer():
 
 @app.route('/infer_json', methods=['POST'])
 def infer_json():
-    if patchcore.memory_bank is None:
-        return jsonify({'error': 'Memory bank not loaded. Call /load_reference first'}), 400
+    try:
+        _ensure_memory_bank_loaded()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     if 'image' not in request.files:
         return jsonify({'error': 'No image file provided'}), 400
     file = request.files['image']
